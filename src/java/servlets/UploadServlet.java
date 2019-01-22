@@ -11,6 +11,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.annotation.WebServlet;
@@ -18,6 +21,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.Part;
+import utils.UploadPath;
 
 /**
  *
@@ -27,6 +31,8 @@ import javax.servlet.http.Part;
 @MultipartConfig
 
 public class UploadServlet extends HttpServlet {
+
+    private List<String> listFiles = new ArrayList<>();
 
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
@@ -42,38 +48,70 @@ public class UploadServlet extends HttpServlet {
 
         response.setContentType("text/html;charset=UTF-8");
         request.setCharacterEncoding("UTF-8");
-        String pathToImageFolder = "C:\\Users\\pupil\\Documents\\UploadFolder";
+
+        String pathToImageFolder = UploadPath.getPath("path");
         Part filePart = request.getPart("file");
         String fileName = getFileName(filePart);
-        
+
+        //---------------
         OutputStream out = null;
         InputStream filecontent = null;
-        
-        
-        out= new FileOutputStream( // тут храниться путь к нашему файлу
-                new File(pathToImageFolder
-                +File.separator
-                +fileName
-                )
-        );
+        try {
+            out = new FileOutputStream(
+                    new File(
+                            pathToImageFolder
+                            + File.separator
+                            + fileName
+                    )
+            );
+            filecontent = filePart.getInputStream();
+            int read = 0;
+            byte[] bytes = new byte[1024];
+            while ((read = filecontent.read(bytes)) != -1) {
+                out.write(bytes, 0, read);
+            }
+        } finally {
+            if (out != null) {
+
+            }
+            if (filecontent != null) {
+
+            }
+        }
         filecontent = filePart.getInputStream(); // то что из формы
         int read = 0;
         byte[] bytes = new byte[1024];
-        while ((read = filecontent.read(bytes))!= -1) {
-          out.write(bytes,0,read);
-            
+        while ((read = filecontent.read(bytes)) != -1) {
+            out.write(bytes, 0, read);
+
         }
-        
-        
+
+        this.readFiles(new File(pathToImageFolder));
+        request.setAttribute("listFiles", listFiles);
+        request.
     }
-   private String getFileName(Part part){
+
+    public void readFiles(File baseDirectory) {
+        if (baseDirectory.isDirectory()) {
+            for (File file : baseDirectory.listFiles()) {
+                if (file.isFile()) {
+                    this.listFiles.add(file.getName() + " - файл");
+                } else {
+                    System.out.println(file.getName() + " каталог");
+                    readFiles(file);
+                }
+            }
+        }
+    }
+
+    private String getFileName(Part part) {
         String partHeader = part.getHeader("content-disposition");
-        for(String content : part.getHeader("content-disposition").split(";")){
-            if(content.trim().startsWith("filename")){
+        for (String content : part.getHeader("content-disposition").split(";")) {
+            if (content.trim().startsWith("filename")) {
                 return content.substring(
-                        content.indexOf('=')+1
-                       ).trim()
-                        .replace("\"","");
+                        content.indexOf('=') + 1
+                ).trim()
+                        .replace("\"", "");
             }
         }
         return null;
